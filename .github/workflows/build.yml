@@ -1,0 +1,118 @@
+name: Build Pake App
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Target URL to package'
+        required: true
+        default: 'https://example.com'
+      name:
+        description: 'App name'
+        required: true
+        default: 'MyApp'
+      icon:
+        description: 'Icon URL (optional)'
+        required: false
+        default: ''
+      width:
+        description: 'Window width'
+        required: false
+        default: '1200'
+      height:
+        description: 'Window height'
+        required: false
+        default: '780'
+      targets:
+        description: 'Platforms: macos,windows,linux'
+        required: false
+        default: 'macos,windows'
+      package_name:
+        description: 'Package name (optional)'
+        required: false
+        default: ''
+
+jobs:
+  build-macos:
+    if: ${{ contains(github.event.inputs.targets, 'macos') }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Install pake-cli
+        run: npm install -g pake-cli
+      - name: Build
+        run: |
+          pake "${{ github.event.inputs.url }}" \
+            --name "${{ github.event.inputs.name }}" \
+            --width ${{ github.event.inputs.width }} \
+            --height ${{ github.event.inputs.height }}
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: |
+            *.dmg
+            output/*.dmg
+
+  build-windows:
+    if: ${{ contains(github.event.inputs.targets, 'windows') }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install pake-cli
+        run: npm install -g pake-cli
+      - name: Build
+        run: pake "${{ github.event.inputs.url }}" --name "${{ github.event.inputs.name }}" --width ${{ github.event.inputs.width }} --height ${{ github.event.inputs.height }}
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: |
+            *.msi
+            *.exe
+            output/*.msi
+            output/*.exe
+
+  build-linux:
+    if: ${{ contains(github.event.inputs.targets, 'linux') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Install pake-cli
+        run: npm install -g pake-cli
+      - name: Build
+        run: |
+          pake "${{ github.event.inputs.url }}" \
+            --name "${{ github.event.inputs.name }}" \
+            --width ${{ github.event.inputs.width }} \
+            --height ${{ github.event.inputs.height }}
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-app
+          path: |
+            *.deb
+            *.AppImage
+            output/*.deb
+            output/*.AppImage
