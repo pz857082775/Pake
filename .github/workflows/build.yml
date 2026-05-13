@@ -1,3 +1,4 @@
+# mileapp-workflow-version: 3
 name: Build Pake App
 
 on:
